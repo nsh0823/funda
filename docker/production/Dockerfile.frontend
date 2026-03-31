@@ -14,9 +14,6 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ARG VITE_SOCKET_URL=https://funda.website
 ENV VITE_SOCKET_URL=${VITE_SOCKET_URL}
 
-ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
-
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
