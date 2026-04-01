@@ -54,7 +54,7 @@ async function bootstrap() {
   const portFromConfig = config.get<number>('PORT', 3000);
   const port = !Number.isNaN(portFromEnv) && portFromEnv > 0 ? portFromEnv : portFromConfig;
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
   logger.log(`Backend listening on port ${port}`);
