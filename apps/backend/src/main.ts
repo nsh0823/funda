@@ -50,8 +50,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const portFromEnv = Number(process.env.PORT);
-  const portFromConfig = config.get<number>('PORT', 3000);
+  const portFromEnv = Number(process.env.SERVER_PORT);
+  const portFromConfig = config.get<number>('SERVER_PORT', 3000);
   const port = !Number.isNaN(portFromEnv) && portFromEnv > 0 ? portFromEnv : portFromConfig;
 
   await app.listen(port, '0.0.0.0');
