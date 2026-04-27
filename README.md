@@ -6,7 +6,8 @@
 
   <p>
     <a href="https://funda.website"><strong>🌐 배포 사이트</strong></a> •
-    <a href="https://github.com/boostcampwm2025/web21-funda/wiki"><strong>📚 프로젝트 위키</strong></a>
+    <a href="https://github.com/boostcampwm2025/web21-funda/wiki"><strong>📚 프로젝트 위키</strong></a> •
+    <a href="https://github.com/boostcampwm2025/web21-funda"><strong>🗃️ 원본 리포지토리</strong></a>
   </p>
 
   <p>
@@ -21,6 +22,24 @@
 
 <br/>
 <br/>
+
+
+---
+
+## 🙋‍♂️ 담당 역할 및 주요 기여
+- 랜딩 페이지, 로드맵 페이지, 메인 학습 페이지, 배틀 시작 페이지, 배틀 퀴즈 페이지 등 핵심 프론트엔드 화면 구현
+- 사운드 효과음과 인터랙션 요소를 적용하여 게임형 CS 학습 서비스의 몰입감 강화
+- 로그인 상태임에도 비로그인 UI가 잠시 노출되는 UI Flicker 문제를 인증 상태 준비 이전 렌더링 문제로 정의하고 해결
+- TanStack Query, `useSuspenseQuery`, `isAuthReady` 가드를 활용하여 인증 상태 기반 렌더링 흐름 안정화
+- Step hover 시 `queryClient.prefetchQuery`를 적용하여 퀴즈 데이터를 사전 요청하고 학습 진입 시 체감 로딩 감소
+- `staleTime`, `refetchOnMount`, `refetchOnWindowFocus` 옵션을 조정하여 불필요한 네트워크 요청 최소화
+- 퀴즈 완료 후 XP, 하트, 스트릭 등 사용자 상태 변경을 `invalidateQueries`로 안정적으로 반영
+- 실시간 배틀에서 서버 시간을 기준으로 카운트다운을 계산하도록 백엔드 및 프론트엔드 로직을 개선하여 배포 환경의 시간 오차 문제 완화
+- 참여자 상태 업데이트와 일시적 연결 끊김 상황을 고려하여 배틀 진행 UX 안정성 개선
+- n8n과 LLM을 활용해 Google Sheets 기반 커리큘럼을 순회하며 CS 문제를 자동 생성하는 데이터 파이프라인 구축
+   - JSON Schema 기반 검증과 JSONL 변환 과정을 적용하여 AI 출력 데이터의 구조적 안정성 확보
+   - 약 60시간 걸리는 6,000개의 CS 문제 생성을 약 4시간 내 완료하여 콘텐츠 제작 병목을 해소하고 반복 수작업을 크게 단축
+
 
 ---
 
