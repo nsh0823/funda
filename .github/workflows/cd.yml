@@ -14,23 +14,30 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: deploy to NCP Server
+      - name: deploy to Azure VM
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.SERVER_SSH_PORT }}
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          port: ${{ secrets.AZURE_VM_SSH_PORT }}
           script: |
-            APP_DIR=~/web21-funda
-            cd $APP_DIR
+            set -euo pipefail
+
+            APP_DIR="${{ secrets.AZURE_VM_APP_DIR }}"
+            if [ -z "$APP_DIR" ]; then
+              echo "AZURE_VM_APP_DIR secret is required."
+              exit 1
+            fi
+
+            cd "$APP_DIR"
 
             # 1. 최신 코드 가져오기 (배포 설정 파일 갱신) 배포용
-            git pull origin main
+            git pull --ff-only origin main
 
             # 2. .env 파일 생성 (루트 디렉토리)
-            printf "NCR_REGISTRY=%s\nDB_USER=%s\nDB_PASSWORD=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
-            "${{ secrets.NCR_REGISTRY }}" \
+            printf "ACR_LOGIN_SERVER=%s\nDB_USER=%s\nDB_PASSWORD=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
+            "${{ secrets.ACR_LOGIN_SERVER }}" \
             "${{ secrets.DB_USER }}" \
             "${{ secrets.DB_PASSWORD }}" \
             "${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
@@ -41,8 +48,8 @@ jobs:
             mkdir -p apps/backend
             printf '%s' "${{ secrets.ENV_BE_PROD }}" > apps/backend/.env.production
 
-            # 4. NCR 로그인
-            echo "${{ secrets.NCP_SECRET_KEY }}" | docker login ${{ secrets.NCR_REGISTRY }} -u ${{ secrets.NCP_ACCESS_KEY }} --password-stdin
+            # 4. Azure Container Registry 로그인
+            echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
 
             # 5. 네트워크 및 공통 설정 준비
             docker network inspect funda-network >/dev/null 2>&1 || docker network create funda-network
