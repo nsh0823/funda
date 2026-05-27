@@ -9,6 +9,7 @@ import { AiAskController } from './ai-ask.controller';
 import { AiAskService } from './ai-ask.service';
 import { AiAskClovaService } from './ai-ask-clova.service';
 import { AiAskGeminiService } from './ai-ask-gemini.service';
+import { AiAskHuggingFaceService } from './ai-ask-huggingface.service';
 import { AiAskPromptService } from './ai-ask-prompt.service';
 import { AiAskProviderService } from './ai-ask-provider.service';
 
@@ -28,6 +29,7 @@ import { AiAskProviderService } from './ai-ask-provider.service';
     AiAskPromptService,
     AiAskClovaService,
     AiAskGeminiService,
+    AiAskHuggingFaceService,
     AiAskProviderService,
   ],
 })

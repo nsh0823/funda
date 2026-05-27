@@ -5,8 +5,9 @@ import { Quiz } from '../roadmap/entities/quiz.entity';
 
 import { AiAskClovaService } from './ai-ask-clova.service';
 import { AiAskGeminiService } from './ai-ask-gemini.service';
+import { AiAskHuggingFaceService } from './ai-ask-huggingface.service';
 
-export type AiProviderType = 'clova' | 'gemini';
+export type AiProviderType = 'clova' | 'gemini' | 'huggingface';
 
 /**
  * 환경 설정에 따라 AI 제공자를 선택해 호출한다.
@@ -19,6 +20,7 @@ export class AiAskProviderService {
     private readonly configService: ConfigService,
     private readonly clovaService: AiAskClovaService,
     private readonly geminiService: AiAskGeminiService,
+    private readonly huggingFaceService: AiAskHuggingFaceService,
   ) {
     const rawProvider = this.configService.get<string>('AI_PROVIDER') ?? 'clova';
     this.provider = this.normalizeProvider(rawProvider);
@@ -27,6 +29,10 @@ export class AiAskProviderService {
   async requestAnswer(quiz: Quiz, userQuestion: string): Promise<string> {
     if (this.provider === 'gemini') {
       return this.geminiService.requestAnswer(quiz, userQuestion);
+    }
+
+    if (this.provider === 'huggingface') {
+      return this.huggingFaceService.requestAnswer(quiz, userQuestion);
     }
 
     return this.clovaService.requestAnswer(quiz, userQuestion);
@@ -41,6 +47,10 @@ export class AiAskProviderService {
       return this.geminiService.requestAnswerStream(quiz, userQuestion, onChunk);
     }
 
+    if (this.provider === 'huggingface') {
+      return this.huggingFaceService.requestAnswerStream(quiz, userQuestion, onChunk);
+    }
+
     return this.clovaService.requestAnswerStream(quiz, userQuestion, onChunk);
   }
 
@@ -50,7 +60,7 @@ export class AiAskProviderService {
 
   private normalizeProvider(value: string): AiProviderType {
     const trimmed = value.trim().toLowerCase();
-    if (trimmed === 'clova' || trimmed === 'gemini') {
+    if (trimmed === 'clova' || trimmed === 'gemini' || trimmed === 'huggingface') {
       return trimmed;
     }
 
