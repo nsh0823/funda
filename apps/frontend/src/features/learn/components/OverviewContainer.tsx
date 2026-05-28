@@ -1,4 +1,4 @@
-import { css, type SerializedStyles, useTheme } from '@emotion/react';
+import { css, useTheme } from '@emotion/react';
 
 import { MarkdownRenderer } from '@/comp/MarkdownRenderer';
 import SVGIcon from '@/comp/SVGIcon';
@@ -8,18 +8,13 @@ import type { Theme } from '@/styles/theme';
 
 interface BackButtonProps {
   onBack: () => void;
-  css: SerializedStyles;
+  className?: string;
   'aria-label': string;
   children?: React.ReactNode;
 }
 
-const BackButton = ({
-  onBack,
-  css: cssProp,
-  'aria-label': ariaLabel,
-  children,
-}: BackButtonProps) => (
-  <button type="button" css={cssProp} onClick={onBack} aria-label={ariaLabel}>
+const BackButton = ({ onBack, className, 'aria-label': ariaLabel, children }: BackButtonProps) => (
+  <button type="button" className={className} onClick={onBack} aria-label={ariaLabel}>
     {children ?? (
       <>
         <SVGIcon icon="ArrowLeft" size="sm" aria-hidden="true" />
