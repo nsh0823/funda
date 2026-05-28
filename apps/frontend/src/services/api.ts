@@ -1,4 +1,11 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
+const normalizeApiBaseUrl = (value: string): string => {
+  const trimmedValue = value.trim().replace(/\/+$/, '');
+  const normalizedValue = trimmedValue.replace(/(?:\/api)+$/, '/api');
+
+  return normalizedValue.length > 0 ? normalizedValue : '/api';
+};
+
+export const BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL ?? '/api');
 
 /** API 표준 응답 포맷 */
 interface ApiResponse<T> {

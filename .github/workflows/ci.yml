@@ -82,6 +82,6 @@ jobs:
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ secrets.ACR_LOGIN_SERVER }}/funda-frontend:latest
           build-args: |
-            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            VITE_API_BASE_URL=/api
             VITE_SOCKET_URL=${{ secrets.VITE_SOCKET_URL }}
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
