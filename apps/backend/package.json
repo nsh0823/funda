@@ -19,6 +19,7 @@
     "migration:show": "typeorm-ts-node-commonjs -d src/config/typeorm.data-source.ts migration:show",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:checkpoint-pools": "ts-node src/scripts/seed-checkpoint-quiz-pools.ts",
+    "seed:demo-ranking": "ts-node src/scripts/seed-demo-ranking.ts",
     "seed:rulesets": "ts-node src/scripts/seed-ranking-rulesets.ts"
   },
   "dependencies": {
