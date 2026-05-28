@@ -31,11 +31,17 @@ export const usePrefetchQuizzesByStep = () => {
     });
 };
 
-export const useSubmitQuizMutation = () =>
-  useMutation({
+export const useSubmitQuizMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: ({ quizId, payload }: { quizId: number; payload: QuizSubmissionRequest }) =>
       quizService.submitQuiz(quizId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['today-goals'] });
+    },
   });
+};
 
 export const useCompleteStepMutation = () => {
   const queryClient = useQueryClient();
@@ -45,6 +51,7 @@ export const useCompleteStepMutation = () => {
       quizService.completeStep(stepId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leaderboardKeys.weekly() });
+      queryClient.invalidateQueries({ queryKey: ['today-goals'] });
     },
   });
 };
