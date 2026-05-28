@@ -21,6 +21,7 @@ export enum AiAnswerStatus {
 export enum AiProviderType {
   CLOVA = 'clova',
   GEMINI = 'gemini',
+  HUGGINGFACE = 'huggingface',
 }
 
 @Entity({ name: 'ai_question_answers' })

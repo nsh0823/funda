@@ -215,6 +215,9 @@ export class AiAskService {
     if (provider === 'gemini') {
       return AiProviderType.GEMINI;
     }
+    if (provider === 'huggingface') {
+      return AiProviderType.HUGGINGFACE;
+    }
     return AiProviderType.CLOVA;
   }
 }
