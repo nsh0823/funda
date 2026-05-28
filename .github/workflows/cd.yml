@@ -37,10 +37,8 @@ jobs:
             git pull --ff-only origin main
 
             # 2. .env 파일 생성 (루트 디렉토리)
-            printf "ACR_LOGIN_SERVER=%s\nDB_USER=%s\nDB_PASSWORD=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
+            printf "ACR_LOGIN_SERVER=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
             "${{ secrets.ACR_LOGIN_SERVER }}" \
-            "${{ secrets.DB_USER }}" \
-            "${{ secrets.DB_PASSWORD }}" \
             "${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
             "${{ secrets.GRAFANA_ROOT_URL }}" \
             "${{ secrets.SLACK_WEBHOOK_URL }}" > .env
@@ -62,7 +60,7 @@ jobs:
             docker compose --env-file .env -f $APP_COMPOSE pull
             # docker compose --env-file .env -f $MONITOR_COMPOSE pull
 
-            docker compose --env-file .env -f $APP_COMPOSE up -d
+            docker compose --env-file .env -f $APP_COMPOSE up -d --remove-orphans
             # docker compose --env-file .env -f $MONITOR_COMPOSE up -d
 
             # 7. DB 마이그레이션

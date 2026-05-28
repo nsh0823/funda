@@ -8,6 +8,14 @@ const toInt = (value: string | undefined, fallback: number): number => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
+const toBool = (value: string | undefined, fallback = false): boolean => {
+  if (!value) {
+    return fallback;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+};
+
 const loadEnvironment = (): void => {
   const environment = process.env.NODE_ENV ?? 'development';
   loadEnv({ path: `.env.${environment}` });
@@ -33,6 +41,11 @@ const createDataSourceOptions = (): DataSourceOptions => {
     migrations: [path.join(__dirname, '..', 'migrations', `*.${migrationExtension}`)],
     synchronize: false,
     logging: process.env.NODE_ENV !== 'production',
+    ssl: toBool(process.env.DB_SSL)
+      ? {
+          rejectUnauthorized: toBool(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
+        }
+      : undefined,
   };
 };
 

@@ -1,26 +1,4 @@
-version: '3.9'
-
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: funda-mysql
-    env_file:
-     - ../../.env
-    environment:
-      MYSQL_DATABASE: funda
-      # 아래 변수들은 배포 시 생성되는 .env 파일에서 자동으로 채워짐
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
-      TZ: Asia/Seoul
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u${DB_USER}', '-p${DB_PASSWORD}']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
   redis:
     image: redis:alpine
     container_name: funda-redis
@@ -47,8 +25,6 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -77,5 +53,4 @@ networks:
     external: true
 
 volumes:
-  mysql_data:
   redis_data:

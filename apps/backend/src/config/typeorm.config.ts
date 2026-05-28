@@ -8,6 +8,14 @@ const toInt = (value: string | undefined, fallback: number): number => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
+const toBool = (value: string | undefined, fallback = false): boolean => {
+  if (!value) {
+    return fallback;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+};
+
 const entityPaths = [path.join(__dirname, '..', '**', '*.entity.{ts,js}')];
 
 export const createTypeOrmOptions = (config: ConfigService): DataSourceOptions => ({
@@ -21,4 +29,9 @@ export const createTypeOrmOptions = (config: ConfigService): DataSourceOptions =
   entities: entityPaths,
   synchronize: false,
   logging: config.get<string>('NODE_ENV') !== 'production',
+  ssl: toBool(config.get<string>('DB_SSL'))
+    ? {
+        rejectUnauthorized: toBool(config.get<string>('DB_SSL_REJECT_UNAUTHORIZED'), true),
+      }
+    : undefined,
 });
