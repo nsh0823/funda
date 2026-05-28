@@ -358,11 +358,12 @@ const navItemStyle = (theme: Theme) => css`
 
 const activeNavItemStyle = (theme: Theme, isDarkMode: boolean) => css`
   background: ${theme.colors.primary.surface};
-  color: ${isDarkMode ? theme.colors.surface.default : theme.colors.primary.main};
+  color: ${isDarkMode ? theme.colors.grayscale[200] : theme.colors.primary.main};
   font-weight: 700;
 
   &:hover {
-    color: ${isDarkMode ? theme.colors.primary.light : theme.colors.primary.main};
+    background: ${theme.colors.primary.surface};
+    color: ${isDarkMode ? theme.colors.grayscale[200] : theme.colors.primary.main};
   }
 
   @media (max-width: 768px) {
