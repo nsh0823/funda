@@ -67,5 +67,9 @@ jobs:
             docker compose --env-file .env -f $APP_COMPOSE exec -T backend \
               node ./node_modules/typeorm/cli.js -d dist/config/typeorm.data-source.js migration:run
 
+            # 7-1. 로드맵/필드 캐시 삭제
+            docker compose --env-file .env -f $APP_COMPOSE exec -T redis sh -lc \
+              "redis-cli --scan --pattern 'fields:*' | xargs -r redis-cli DEL"
+
             # 8. 정리
             docker image prune -f
