@@ -450,7 +450,7 @@ export class ProgressService {
     });
 
     const logs = await this.solveLogRepository.find({
-      where: { userId, createdAt: Between(start, end) },
+      where: { userId, solvedAt: Between(start, end) },
     });
 
     const totalEarnedXP = this.calculateScore(logs);

@@ -431,6 +431,11 @@ describe('ProgressService', () => {
 
       await service.getTodayGoals(1);
 
+      const solveLogFindCall = solveLogFindMock.mock.calls.at(-1)?.[0] as
+        | { where?: Record<string, unknown> }
+        | undefined;
+      expect(solveLogFindCall?.where).toHaveProperty('solvedAt');
+      expect(solveLogFindCall?.where).not.toHaveProperty('createdAt');
       expect(userIncrementMock).toHaveBeenCalledWith({ id: 1 }, 'diamondCount', 1);
       expect(userUpdateMock).toHaveBeenCalledWith(
         { id: 1 },
