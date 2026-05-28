@@ -17,6 +17,7 @@ import { AuthProvider, UserRole } from '../users/entities/user.entity';
 import type { JwtPayload } from './types/jwt-payload.type';
 import type { RequestMeta } from './types/request-meta.type';
 import type { GithubProfile } from './github.strategy';
+import type { GoogleProfile } from './google.strategy';
 
 interface TokenPairResult {
   accessToken: string;
@@ -69,6 +70,27 @@ export class AuthService {
     clientId?: string,
   ): Promise<TokenPairResult> {
     const user = await this.upsertGithubUser(profile);
+    return this.completeOAuthLogin(user, meta, clientId);
+  }
+
+  /**
+   * Google profile based login. Creates or updates a user, then issues tokens.
+   * Redis에 저장된 비로그인 사용자의 데이터를 동기화한다.
+   */
+  async handleGoogleLogin(
+    profile: GoogleProfile,
+    meta: RequestMeta,
+    clientId?: string,
+  ): Promise<TokenPairResult> {
+    const user = await this.upsertGoogleUser(profile);
+    return this.completeOAuthLogin(user, meta, clientId);
+  }
+
+  private async completeOAuthLogin(
+    user: User,
+    meta: RequestMeta,
+    clientId?: string,
+  ): Promise<TokenPairResult> {
     await this.recoverHeart(user);
 
     // Redis에서 비로그인 사용자의 데이터 동기화
@@ -258,6 +280,36 @@ export class AuthService {
     return this.users.save(newUser);
   }
 
+  private async upsertGoogleUser(profile: GoogleProfile): Promise<User> {
+    const existingUser = await this.users.findOne({
+      where: {
+        provider: AuthProvider.GOOGLE,
+        providerUserId: profile.id,
+      },
+    });
+
+    if (existingUser) {
+      existingUser.displayName = this.pickGoogleDisplayName(profile);
+      existingUser.profileImageUrl = this.pickAvatar(profile);
+      existingUser.email = this.pickEmail(profile);
+      existingUser.lastLoginAt = new Date();
+
+      return this.users.save(existingUser);
+    }
+
+    const newUser = this.users.create({
+      provider: AuthProvider.GOOGLE,
+      providerUserId: profile.id,
+      displayName: this.pickGoogleDisplayName(profile),
+      profileImageUrl: this.pickAvatar(profile),
+      email: this.pickEmail(profile),
+      role: UserRole.USER,
+      lastLoginAt: new Date(),
+    });
+
+    return this.users.save(newUser);
+  }
+
   private async issueTokens(user: User, meta: RequestMeta): Promise<TokenPair> {
     const payload: JwtPayload = {
       sub: user.id,
@@ -345,12 +397,13 @@ export class AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private pickEmail(profile: GithubProfile): string | null {
+  private pickEmail(profile: GithubProfile | GoogleProfile): string | null {
     if (!profile.emails || profile.emails.length === 0) {
       return null;
     }
 
-    const primaryEmail = profile.emails.find(email => email.primary) ?? profile.emails[0];
+    const primaryEmail =
+      profile.emails.find(email => 'primary' in email && email.primary) ?? profile.emails[0];
     if (!primaryEmail || typeof primaryEmail.value !== 'string') {
       return null;
     }
@@ -358,7 +411,7 @@ export class AuthService {
     return primaryEmail.value;
   }
 
-  private pickAvatar(profile: GithubProfile): string | null {
+  private pickAvatar(profile: GithubProfile | GoogleProfile): string | null {
     if (!profile.photos || profile.photos.length === 0) {
       return null;
     }
@@ -381,6 +434,19 @@ export class AuthService {
     }
 
     return 'GitHub User';
+  }
+
+  private pickGoogleDisplayName(profile: GoogleProfile): string {
+    if (profile.displayName && profile.displayName.trim().length > 0) {
+      return profile.displayName;
+    }
+
+    const email = this.pickEmail(profile);
+    if (email) {
+      return email.split('@')[0] ?? email;
+    }
+
+    return 'Google User';
   }
 
   /**

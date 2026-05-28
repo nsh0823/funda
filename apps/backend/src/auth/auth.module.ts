@@ -12,6 +12,7 @@ import { User, UserRefreshToken } from '../users/entities';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GithubStrategy } from './github.strategy';
+import { GoogleStrategy } from './google.strategy';
 import { JwtAccessStrategy } from './jwt-access.strategy';
 import { JwtRefreshStrategy } from './jwt-refresh.strategy';
 
@@ -31,7 +32,14 @@ import { JwtRefreshStrategy } from './jwt-refresh.strategy';
     TypeOrmModule.forFeature([User, UserRefreshToken, UserStepStatus, Step]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, GithubStrategy, JwtAccessStrategy, JwtRefreshStrategy, RedisService],
+  providers: [
+    AuthService,
+    GithubStrategy,
+    GoogleStrategy,
+    JwtAccessStrategy,
+    JwtRefreshStrategy,
+    RedisService,
+  ],
   exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}

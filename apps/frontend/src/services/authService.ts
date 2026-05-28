@@ -12,8 +12,8 @@ interface MeResponse {
 
 export const authService = {
   async loginWithGoogle(): Promise<void> {
-    // TODO: Google OAuth 연동 예정
-    throw new Error('Not implemented');
+    const targetUrl = `${BASE_URL}/auth/google`;
+    window.location.href = targetUrl;
   },
 
   async loginWithGitHub(): Promise<void> {

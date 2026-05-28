@@ -14,16 +14,25 @@ import { CacheKeys } from '../common/cache/cache-keys';
 import { RedisService } from '../common/redis/redis.service';
 
 import { GithubAuthGuard } from './guards/github.guard';
+import { GoogleAuthGuard } from './guards/google.guard';
 import { JwtAccessGuard } from './guards/jwt-access.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import type { JwtPayload } from './types/jwt-payload.type';
 import type { RequestMeta } from './types/request-meta.type';
 import { AuthService, type AuthUserProfile } from './auth.service';
 import type { GithubProfile } from './github.strategy';
+import type { GoogleProfile } from './google.strategy';
 import type { RefreshRequestUser } from './jwt-refresh.strategy';
 
 type GithubRequest = {
   user?: GithubProfile;
+  headers?: Record<string, unknown>;
+  ip?: string;
+  cookies?: Record<string, string>;
+};
+
+type GoogleRequest = {
+  user?: GoogleProfile;
   headers?: Record<string, unknown>;
   ip?: string;
   cookies?: Record<string, string>;
@@ -160,6 +169,50 @@ export class AuthController {
     const meta = this.toRequestMeta(req);
     const clientId = req.cookies?.client_id;
     const { accessToken, refreshToken } = await this.authService.handleGithubLogin(
+      req.user,
+      meta,
+      clientId,
+    );
+
+    this.authService.attachRefreshTokenCookie(res, refreshToken);
+    this.authService.attachAccessTokenCookie(res, accessToken);
+
+    const redirectUrl = this.buildRedirectUrl();
+    return res.redirect(redirectUrl);
+  }
+
+  @Get('google')
+  @ApiOperation({
+    summary: 'Google OAuth 로그인 시작',
+    description: 'Google 로그인 페이지로 리다이렉트한다.',
+  })
+  @ApiOkResponse({ description: 'Google로 리다이렉트됩니다.' })
+  @UseGuards(GoogleAuthGuard)
+  googleLogin(): void {
+    // Google OAuth 로그인 URL로 리다이렉트된다. 로직은 Strategy에서 처리
+  }
+
+  @Get('google/callback')
+  @ApiOperation({
+    summary: 'Google OAuth 콜백',
+    description:
+      'Google 인증 코드를 처리하고 리프레시 토큰과 액세스 토큰 쿠키를 설정한 뒤 클라이언트로 리다이렉트한다.',
+  })
+  @ApiOkResponse({ description: '클라이언트로 리다이렉트됩니다.' })
+  @ApiUnauthorizedResponse({ description: 'Google 인증 실패' })
+  @UseGuards(GoogleAuthGuard)
+  googleCallback(@Req() req: GoogleRequest, @Res({ passthrough: true }) res: Response) {
+    return this.handleGoogleCallback(req, res);
+  }
+
+  private async handleGoogleCallback(req: GoogleRequest, res: Response) {
+    if (!req.user) {
+      throw new UnauthorizedException('Google 프로필 정보를 확인할 수 없습니다.');
+    }
+
+    const meta = this.toRequestMeta(req);
+    const clientId = req.cookies?.client_id;
+    const { accessToken, refreshToken } = await this.authService.handleGoogleLogin(
       req.user,
       meta,
       clientId,

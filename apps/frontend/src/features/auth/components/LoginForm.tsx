@@ -11,68 +11,74 @@ interface LoginFormProps {
   onGoogleLogin: () => void;
   onGitHubLogin: () => void;
   isLoggingIn: boolean;
+  loggingProvider?: 'google' | 'github' | null;
 }
 
-export const LoginForm = memo(({ onGoogleLogin, onGitHubLogin, isLoggingIn }: LoginFormProps) => {
-  const theme = useTheme();
+export const LoginForm = memo(
+  ({ onGoogleLogin, onGitHubLogin, isLoggingIn, loggingProvider = null }: LoginFormProps) => {
+    const theme = useTheme();
+    const isGoogleLoggingIn = loggingProvider === 'google';
+    const isGitHubLoggingIn = loggingProvider === 'github';
 
-  return (
-    <main css={containerStyle()}>
-      <section css={contentStyle()}>
-        <div css={placeholderStyle}>
-          <FundyPreviewCanvas
-            initialAnimation={{ lookAt: true }}
-            idleExpression="smileSoft"
-            idleExpressionHold={false}
-            idleExpressionDelayMs={300}
-            autoHello
-          />
-        </div>
-        <h1 css={titleStyle(theme)}>Funda</h1>
-        <p css={taglineStyle(theme)}>재미있게 배우는 개발 지식</p>
+    return (
+      <main css={containerStyle()}>
+        <section css={contentStyle()}>
+          <div css={placeholderStyle}>
+            <FundyPreviewCanvas
+              initialAnimation={{ lookAt: true }}
+              idleExpression="smileSoft"
+              idleExpressionHold={false}
+              idleExpressionDelayMs={300}
+              autoHello
+            />
+          </div>
+          <h1 css={titleStyle(theme)}>Funda</h1>
+          <p css={taglineStyle(theme)}>재미있게 배우는 개발 지식</p>
 
-        <div css={buttonGroupStyle} role="group" aria-label="로그인">
-          <Button
-            variant="secondary"
-            onClick={onGoogleLogin}
-            fullWidth
-            css={loginButtonStyle}
-            disabled
-            aria-label="Google로 로그인 (현재 비활성)"
-          >
-            <SVGIcon icon="Google" size="md" aria-hidden="true" />
-            <span>Google로 계속하기</span>
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onGitHubLogin}
-            fullWidth
-            css={loginButtonStyle}
-            disabled={isLoggingIn}
-            aria-label={isLoggingIn ? 'GitHub 로그인 중' : 'GitHub로 로그인'}
-            aria-busy={isLoggingIn}
-          >
-            <SVGIcon icon="Github" size="md" aria-hidden="true" />
-            <span>GitHub로 {isLoggingIn ? '로그인 중..' : '계속하기'}</span>
-          </Button>
-        </div>
+          <div css={buttonGroupStyle} role="group" aria-label="로그인">
+            <Button
+              variant="secondary"
+              onClick={onGoogleLogin}
+              fullWidth
+              css={loginButtonStyle}
+              disabled={isLoggingIn}
+              aria-label={isGoogleLoggingIn ? 'Google 로그인 중' : 'Google로 로그인'}
+              aria-busy={isGoogleLoggingIn}
+            >
+              <SVGIcon icon="Google" size="md" aria-hidden="true" />
+              <span>Google로 {isGoogleLoggingIn ? '로그인 중..' : '계속하기'}</span>
+            </Button>
+            <Button
+              variant="primary"
+              onClick={onGitHubLogin}
+              fullWidth
+              css={loginButtonStyle}
+              disabled={isLoggingIn}
+              aria-label={isGitHubLoggingIn ? 'GitHub 로그인 중' : 'GitHub로 로그인'}
+              aria-busy={isGitHubLoggingIn}
+            >
+              <SVGIcon icon="Github" size="md" aria-hidden="true" />
+              <span>GitHub로 {isGitHubLoggingIn ? '로그인 중..' : '계속하기'}</span>
+            </Button>
+          </div>
 
-        <p css={policyTextStyle(theme)}>
-          계속 진행하면 Funda의{' '}
-          <Link to="/terms" css={linkStyle(theme)}>
-            이용약관
-          </Link>{' '}
-          및{' '}
-          <Link to="/privacy" css={linkStyle(theme)}>
-            개인정보처리방침
-          </Link>
-          에 동의하며, <br /> 학습 독려를 위한 <strong>이메일 알림 수신</strong>에 동의하는 것으로
-          간주됩니다.
-        </p>
-      </section>
-    </main>
-  );
-});
+          <p css={policyTextStyle(theme)}>
+            계속 진행하면 Funda의{' '}
+            <Link to="/terms" css={linkStyle(theme)}>
+              이용약관
+            </Link>{' '}
+            및{' '}
+            <Link to="/privacy" css={linkStyle(theme)}>
+              개인정보처리방침
+            </Link>
+            에 동의하며, <br /> 학습 독려를 위한 <strong>이메일 알림 수신</strong>에 동의하는 것으로
+            간주됩니다.
+          </p>
+        </section>
+      </main>
+    );
+  },
+);
 
 const containerStyle = () => css`
   min-height: 100vh;

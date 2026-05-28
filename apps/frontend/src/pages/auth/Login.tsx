@@ -4,10 +4,11 @@ import { LoginForm } from '@/feat/auth/components/LoginForm';
 import { authService } from '@/services/authService';
 
 export const Login = () => {
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loggingProvider, setLoggingProvider] = useState<'google' | 'github' | null>(null);
+  const isLoggingIn = loggingProvider !== null;
 
   const handleGitHubLogin = useCallback(() => {
-    setIsLoggingIn(true);
+    setLoggingProvider('github');
 
     setTimeout(() => {
       authService.loginWithGitHub();
@@ -15,7 +16,11 @@ export const Login = () => {
   }, []);
 
   const handleGoogleLogin = useCallback(() => {
-    authService.loginWithGoogle();
+    setLoggingProvider('google');
+
+    setTimeout(() => {
+      authService.loginWithGoogle();
+    }, 0);
   }, []);
 
   return (
@@ -23,6 +28,7 @@ export const Login = () => {
       onGoogleLogin={handleGoogleLogin}
       onGitHubLogin={handleGitHubLogin}
       isLoggingIn={isLoggingIn}
+      loggingProvider={loggingProvider}
     />
   );
 };
