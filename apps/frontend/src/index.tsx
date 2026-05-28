@@ -7,29 +7,29 @@ import App from './app';
 
 import '@/styles/main.css';
 
-const loadBoostadSdk = () => {
-  // 개발 환경에서는 광고 SDK를 로딩하지 않는다
-  if (import.meta.env.DEV) {
-    return;
-  }
+// const loadBoostadSdk = () => {
+//   // 개발 환경에서는 광고 SDK를 로딩하지 않는다
+//   if (import.meta.env.DEV) {
+//     return;
+//   }
 
-  const existingScript = document.querySelector(
-    'script[data-boostad-sdk="true"]',
-  ) as HTMLScriptElement | null;
-  if (existingScript) {
-    return;
-  }
+//   const existingScript = document.querySelector(
+//     'script[data-boostad-sdk="true"]',
+//   ) as HTMLScriptElement | null;
+//   if (existingScript) {
+//     return;
+//   }
 
-  const script = document.createElement('script');
-  script.src = 'https://kr.object.ncloudstorage.com/boostad-sdk-dev/sdk/sdk.js';
-  script.async = true;
-  script.dataset.boostadSdk = 'true';
-  script.dataset.blogKey = '42e12acd-506f-455d-9831-864e3d9ccb3e';
-  script.dataset.context = '실시간 협업';
-  script.dataset.auto = 'false';
+//   const script = document.createElement('script');
+//   script.src = 'https://kr.object.ncloudstorage.com/boostad-sdk-dev/sdk/sdk.js';
+//   script.async = true;
+//   script.dataset.boostadSdk = 'true';
+//   script.dataset.blogKey = '42e12acd-506f-455d-9831-864e3d9ccb3e';
+//   script.dataset.context = '실시간 협업';
+//   script.dataset.auto = 'false';
 
-  document.head.appendChild(script);
-};
+//   document.head.appendChild(script);
+// };
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -46,7 +46,7 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
 });
 const startApp = async () => {
-  loadBoostadSdk();
+  // loadBoostadSdk();
 
   if (process.env.NODE_ENV === 'development' && import.meta.env.VITE_ENABLE_MSW === 'true') {
     await worker.start({ onUnhandledRequest: 'bypass' });

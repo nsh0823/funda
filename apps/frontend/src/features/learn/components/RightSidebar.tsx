@@ -383,9 +383,9 @@ export const LearnRightSidebar = ({
           )}
         </div>
 
-        {!import.meta.env.DEV && (
+        {/* {!import.meta.env.DEV && (
           <div data-boostad-zone css={[cardStyle(theme), boostadZoneOverride]}></div>
-        )}
+        )} */}
 
         {isSearchModalOpen && (
           <Modal
@@ -645,14 +645,14 @@ const progressBarStyle = (theme: Theme, percentage: number) => css`
   transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
-const boostadZoneOverride = css`
-  &[data-boostad-zone] {
-    margin: 24px 0 0 !important;
-  }
+// const boostadZoneOverride = css`
+//   &[data-boostad-zone] {
+//     margin: 24px 0 0 !important;
+//   }
 
-  min-height: 107px;
+//   min-height: 107px;
 
-  @media (max-width: 1024px) {
-    display: none;
-  }
-`;
+//   @media (max-width: 1024px) {
+//     display: none;
+//   }
+// `;
