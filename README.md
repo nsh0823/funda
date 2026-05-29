@@ -374,6 +374,19 @@ _Google Sheets × n8n × Gemini로 대규모 퀴즈 생산 라인 구축_
 - 퀴즈 풀이 후 리더보드 등 연관 데이터를 자동 동기화합니다.
 - 선언적 로딩 제어로 UI 복잡도를 낮춥니다.
 
+
+---
+
+## ⚙️ 아키텍처
+
+
+
+<img width="1568" height="1003" alt="image" src="https://github.com/user-attachments/assets/b87e069d-e801-4dc0-b36e-e6ee01ed4de1" />
+
+> [!NOTE]
+> 원본 프로젝트에서 배포는 Azure VM, ACR 대신 NCloud, NCR 기반으로 진행되었었고, AI는 HuggingFace 대신 Clova AI를 활용했었습니다.
+
+
 ---
 
 ## 🚀 시작하기 (Docker)
