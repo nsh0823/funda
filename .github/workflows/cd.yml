@@ -1,11 +1,14 @@
 name: Funda CD (Deploy)
 
-# Self-hosted runner 운영 전제:
-# - Azure VM 내부에 GitHub self-hosted runner가 실행 중이어야 합니다.
-# - runner user가 docker group에 포함되어 있어야 합니다.
+# Azure Run Command 기반 배포 운영 전제:
+# - GitHub-hosted runner에서 azure/login으로 Azure에 로그인합니다.
+# - Service Principal 권한 scope는 해당 resource group 또는 VM으로 제한하는 것을 권장합니다.
+# - role 예시: Virtual Machine Contributor 또는 VM Run Command 실행에 필요한 더 제한된 custom role.
+# - ACR pull은 VM 내부 docker login으로 처리하므로 workflow runner 쪽 ACR role은 필수 아닙니다.
+# - Azure VM의 AZURE_VM_APP_DIR 경로에 이 repository가 clone되어 있어야 합니다.
+# - repository가 private이라면 VM 내부에서 git pull이 가능하도록 인증 설정이 필요합니다.
 # - Azure VM에 Docker 및 Docker Compose plugin이 설치되어 있어야 합니다.
-# - AZURE_VM_APP_DIR 경로에 이 repository가 clone되어 있어야 합니다.
-# - repository가 private이라면 VM 내부 git 인증 설정이 필요합니다.
+# - cloudflared는 서비스 접근용이며 배포 실행에는 직접 관여하지 않습니다.
 
 on:
   workflow_run:
@@ -14,19 +17,21 @@ on:
       - completed
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
-    # CI 워크플로우가 성공적으로 끝났을 때만 실행
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on:
-      # 실제 self-hosted runner label에 맞게 조정하세요.
-      - self-hosted
-      - Linux
-      - X64
+    # 수동 실행은 바로 허용하고, CI 연동 자동 실행은 CI 성공 시에만 배포합니다.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
     steps:
-      - name: deploy on self-hosted runner
-        timeout-minutes: 30
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create remote deployment script
+        shell: bash
         env:
           APP_DIR: ${{ secrets.AZURE_VM_APP_DIR }}
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
@@ -39,15 +44,62 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${APP_DIR:-}" ]; then
+          require_secret() {
+            local name="$1"
+            local value="${!name:-}"
+            if [ -z "$value" ]; then
+              echo "$name secret is required."
+              exit 1
+            fi
+          }
+
+          require_secret APP_DIR
+          require_secret ACR_LOGIN_SERVER
+          require_secret ACR_USERNAME
+          require_secret ACR_PASSWORD
+          require_secret GRAFANA_ADMIN_PASSWORD
+          require_secret GRAFANA_ROOT_URL
+          require_secret SLACK_WEBHOOK_URL
+          require_secret ENV_BE_PROD
+
+          encode_secret() {
+            printf '%s' "$1" | base64 -w 0
+          }
+
+          APP_DIR_B64="$(encode_secret "$APP_DIR")"
+          ACR_LOGIN_SERVER_B64="$(encode_secret "$ACR_LOGIN_SERVER")"
+          ACR_USERNAME_B64="$(encode_secret "$ACR_USERNAME")"
+          ACR_PASSWORD_B64="$(encode_secret "$ACR_PASSWORD")"
+          GRAFANA_ADMIN_PASSWORD_B64="$(encode_secret "$GRAFANA_ADMIN_PASSWORD")"
+          GRAFANA_ROOT_URL_B64="$(encode_secret "$GRAFANA_ROOT_URL")"
+          SLACK_WEBHOOK_URL_B64="$(encode_secret "$SLACK_WEBHOOK_URL")"
+          ENV_BE_PROD_B64="$(encode_secret "$ENV_BE_PROD")"
+
+          cat > deploy-remote.sh <<EOF
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          decode_secret() {
+            printf '%s' "\$1" | base64 -d
+          }
+
+          APP_DIR="\$(decode_secret '$APP_DIR_B64')"
+          ACR_LOGIN_SERVER="\$(decode_secret '$ACR_LOGIN_SERVER_B64')"
+          ACR_USERNAME="\$(decode_secret '$ACR_USERNAME_B64')"
+          ACR_PASSWORD="\$(decode_secret '$ACR_PASSWORD_B64')"
+          GRAFANA_ADMIN_PASSWORD="\$(decode_secret '$GRAFANA_ADMIN_PASSWORD_B64')"
+          GRAFANA_ROOT_URL="\$(decode_secret '$GRAFANA_ROOT_URL_B64')"
+          SLACK_WEBHOOK_URL="\$(decode_secret '$SLACK_WEBHOOK_URL_B64')"
+          ENV_BE_PROD="\$(decode_secret '$ENV_BE_PROD_B64')"
+
+          echo "=== 1. Move to app dir ==="
+          if [ -z "\${APP_DIR:-}" ]; then
             echo "AZURE_VM_APP_DIR secret is required."
             exit 1
           fi
 
-          cd "$APP_DIR"
+          cd "\$APP_DIR"
 
-          # APP_DIR must already be a git repository cloned on the Azure VM.
-          # If this repository is private, git authentication must be configured inside the VM.
           if [ ! -d .git ]; then
             echo "APP_DIR must be an existing git repository."
             exit 1
@@ -55,43 +107,78 @@ jobs:
 
           git status --short --branch
 
-          # 1. 최신 코드 가져오기 (배포 설정 파일 갱신) 배포용
+          echo "=== 2. Git pull ==="
           git pull --ff-only origin main
 
-          # 2. .env 파일 생성 (루트 디렉토리)
-          printf "ACR_LOGIN_SERVER=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
-            "$ACR_LOGIN_SERVER" \
-            "$GRAFANA_ADMIN_PASSWORD" \
-            "$GRAFANA_ROOT_URL" \
-            "$SLACK_WEBHOOK_URL" > .env
+          echo "=== 3. Write env files ==="
+          printf "ACR_LOGIN_SERVER=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \\
+            "\$ACR_LOGIN_SERVER" \\
+            "\$GRAFANA_ADMIN_PASSWORD" \\
+            "\$GRAFANA_ROOT_URL" \\
+            "\$SLACK_WEBHOOK_URL" > .env
 
-          # 3. BE 전용 환경 변수 주입
           mkdir -p apps/backend
-          printf '%s' "$ENV_BE_PROD" > apps/backend/.env.production
+          printf '%s' "\$ENV_BE_PROD" > apps/backend/.env.production
 
-          # 4. Azure Container Registry 로그인
-          echo "$ACR_PASSWORD" | docker login "$ACR_LOGIN_SERVER" -u "$ACR_USERNAME" --password-stdin
+          echo "=== 4. ACR login ==="
+          printf '%s' "\$ACR_PASSWORD" | docker login "\$ACR_LOGIN_SERVER" -u "\$ACR_USERNAME" --password-stdin
 
-          # 5. 네트워크 및 공통 설정 준비
+          echo "=== 5. Docker pull ==="
           docker network inspect funda-network >/dev/null 2>&1 || docker network create funda-network
 
-          # 6. 실행 (애플리케이션)
           APP_COMPOSE=docker/production/docker-compose.deploy.yml
-          # MONITOR_COMPOSE=docker/monitoring/docker-compose.monitoring.production.yml
 
-          docker compose --env-file .env -f "$APP_COMPOSE" pull
-          # docker compose --env-file .env -f "$MONITOR_COMPOSE" pull
+          docker compose --env-file .env -f "\$APP_COMPOSE" pull
 
-          docker compose --env-file .env -f "$APP_COMPOSE" up -d --remove-orphans
-          # docker compose --env-file .env -f "$MONITOR_COMPOSE" up -d
+          echo "=== 6. Docker up ==="
+          docker compose --env-file .env -f "\$APP_COMPOSE" up -d --remove-orphans
+          docker compose --env-file .env -f "\$APP_COMPOSE" ps
 
-          # 7. DB 마이그레이션
-          docker compose --env-file .env -f "$APP_COMPOSE" exec -T backend \
+          echo "=== 7. Migration ==="
+          if ! docker compose --env-file .env -f "\$APP_COMPOSE" ps --status running --services | grep -qx backend; then
+            echo "backend container is not running. Current compose status:"
+            docker compose --env-file .env -f "\$APP_COMPOSE" ps
+            exit 1
+          fi
+
+          docker compose --env-file .env -f "\$APP_COMPOSE" exec -T backend \\
             node ./node_modules/typeorm/cli.js -d dist/config/typeorm.data-source.js migration:run
 
-          # 7-1. 로드맵/필드 캐시 삭제
-          docker compose --env-file .env -f "$APP_COMPOSE" exec -T redis sh -lc \
+          echo "=== 8. Redis cache clear ==="
+          if ! docker compose --env-file .env -f "\$APP_COMPOSE" ps --status running --services | grep -qx redis; then
+            echo "redis container is not running. Current compose status:"
+            docker compose --env-file .env -f "\$APP_COMPOSE" ps
+            exit 1
+          fi
+
+          docker compose --env-file .env -f "\$APP_COMPOSE" exec -T redis sh -lc \\
             "redis-cli --scan --pattern 'fields:*' | xargs -r redis-cli DEL"
 
-          # 8. 정리
+          echo "=== 9. Image prune ==="
           docker image prune -f
+
+          echo "=== Deploy done ==="
+          EOF
+
+          chmod 600 deploy-remote.sh
+
+      - name: Deploy via Azure Run Command
+        uses: azure/cli@v2
+        timeout-minutes: 30
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            az vm run-command invoke \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ secrets.AZURE_VM_NAME }}" \
+              --command-id RunShellScript \
+              --scripts @deploy-remote.sh \
+              --query "value[0].message" \
+              -o tsv
+
+      - name: Cleanup remote deployment script
+        if: always()
+        shell: bash
+        run: |
+          rm -f deploy-remote.sh
