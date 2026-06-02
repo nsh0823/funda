@@ -37,9 +37,6 @@ jobs:
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-          GRAFANA_ROOT_URL: ${{ secrets.GRAFANA_ROOT_URL }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           ENV_BE_PROD: ${{ secrets.ENV_BE_PROD }}
         run: |
           set -euo pipefail
@@ -57,9 +54,6 @@ jobs:
           require_secret ACR_LOGIN_SERVER
           require_secret ACR_USERNAME
           require_secret ACR_PASSWORD
-          require_secret GRAFANA_ADMIN_PASSWORD
-          require_secret GRAFANA_ROOT_URL
-          require_secret SLACK_WEBHOOK_URL
           require_secret ENV_BE_PROD
 
           encode_secret() {
@@ -70,9 +64,6 @@ jobs:
           ACR_LOGIN_SERVER_B64="$(encode_secret "$ACR_LOGIN_SERVER")"
           ACR_USERNAME_B64="$(encode_secret "$ACR_USERNAME")"
           ACR_PASSWORD_B64="$(encode_secret "$ACR_PASSWORD")"
-          GRAFANA_ADMIN_PASSWORD_B64="$(encode_secret "$GRAFANA_ADMIN_PASSWORD")"
-          GRAFANA_ROOT_URL_B64="$(encode_secret "$GRAFANA_ROOT_URL")"
-          SLACK_WEBHOOK_URL_B64="$(encode_secret "$SLACK_WEBHOOK_URL")"
           ENV_BE_PROD_B64="$(encode_secret "$ENV_BE_PROD")"
 
           cat > deploy-remote.sh <<EOF
@@ -87,9 +78,6 @@ jobs:
           ACR_LOGIN_SERVER="\$(decode_secret '$ACR_LOGIN_SERVER_B64')"
           ACR_USERNAME="\$(decode_secret '$ACR_USERNAME_B64')"
           ACR_PASSWORD="\$(decode_secret '$ACR_PASSWORD_B64')"
-          GRAFANA_ADMIN_PASSWORD="\$(decode_secret '$GRAFANA_ADMIN_PASSWORD_B64')"
-          GRAFANA_ROOT_URL="\$(decode_secret '$GRAFANA_ROOT_URL_B64')"
-          SLACK_WEBHOOK_URL="\$(decode_secret '$SLACK_WEBHOOK_URL_B64')"
           ENV_BE_PROD="\$(decode_secret '$ENV_BE_PROD_B64')"
 
           echo "=== 1. Move to app dir ==="
@@ -111,11 +99,7 @@ jobs:
           git pull --ff-only origin main
 
           echo "=== 3. Write env files ==="
-          printf "ACR_LOGIN_SERVER=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \\
-            "\$ACR_LOGIN_SERVER" \\
-            "\$GRAFANA_ADMIN_PASSWORD" \\
-            "\$GRAFANA_ROOT_URL" \\
-            "\$SLACK_WEBHOOK_URL" > .env
+          printf "ACR_LOGIN_SERVER=%s\n" "\$ACR_LOGIN_SERVER" > .env
 
           mkdir -p apps/backend
           printf '%s' "\$ENV_BE_PROD" > apps/backend/.env.production
