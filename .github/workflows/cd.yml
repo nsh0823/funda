@@ -1,5 +1,12 @@
 name: Funda CD (Deploy)
 
+# Self-hosted runner 운영 전제:
+# - Azure VM 내부에 GitHub self-hosted runner가 실행 중이어야 합니다.
+# - runner user가 docker group에 포함되어 있어야 합니다.
+# - Azure VM에 Docker 및 Docker Compose plugin이 설치되어 있어야 합니다.
+# - AZURE_VM_APP_DIR 경로에 이 repository가 clone되어 있어야 합니다.
+# - repository가 private이라면 VM 내부 git 인증 설정이 필요합니다.
+
 on:
   workflow_run:
     workflows: ['Funda CI (Build & Push)']
@@ -12,64 +19,80 @@ jobs:
   deploy:
     # CI 워크플로우가 성공적으로 끝났을 때만 실행
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on:
+      # 실제 self-hosted runner label에 맞게 조정하세요.
+      - self-hosted
+      - linux
+      - x64
+      - funda-prod
     steps:
-      - name: deploy to Azure VM
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.AZURE_VM_HOST }}
-          username: ${{ secrets.AZURE_VM_USER }}
-          key: ${{ secrets.AZURE_VM_SSH_KEY }}
-          port: ${{ secrets.AZURE_VM_SSH_PORT }}
-          command_timeout: 30m
-          script: |
-            set -euo pipefail
+      - name: deploy on self-hosted runner
+        timeout-minutes: 30
+        env:
+          APP_DIR: ${{ secrets.AZURE_VM_APP_DIR }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          GRAFANA_ROOT_URL: ${{ secrets.GRAFANA_ROOT_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ENV_BE_PROD: ${{ secrets.ENV_BE_PROD }}
+        run: |
+          set -euo pipefail
 
-            APP_DIR="${{ secrets.AZURE_VM_APP_DIR }}"
-            if [ -z "$APP_DIR" ]; then
-              echo "AZURE_VM_APP_DIR secret is required."
-              exit 1
-            fi
+          if [ -z "${APP_DIR:-}" ]; then
+            echo "AZURE_VM_APP_DIR secret is required."
+            exit 1
+          fi
 
-            cd "$APP_DIR"
+          cd "$APP_DIR"
 
-            # 1. 최신 코드 가져오기 (배포 설정 파일 갱신) 배포용
-            git pull --ff-only origin main
+          # APP_DIR must already be a git repository cloned on the Azure VM.
+          # If this repository is private, git authentication must be configured inside the VM.
+          if [ ! -d .git ]; then
+            echo "APP_DIR must be an existing git repository."
+            exit 1
+          fi
 
-            # 2. .env 파일 생성 (루트 디렉토리)
-            printf "ACR_LOGIN_SERVER=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
-            "${{ secrets.ACR_LOGIN_SERVER }}" \
-            "${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
-            "${{ secrets.GRAFANA_ROOT_URL }}" \
-            "${{ secrets.SLACK_WEBHOOK_URL }}" > .env
+          git status --short --branch
 
-            # 3. BE 전용 환경 변수 주입
-            mkdir -p apps/backend
-            printf '%s' "${{ secrets.ENV_BE_PROD }}" > apps/backend/.env.production
+          # 1. 최신 코드 가져오기 (배포 설정 파일 갱신) 배포용
+          git pull --ff-only origin main
 
-            # 4. Azure Container Registry 로그인
-            echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+          # 2. .env 파일 생성 (루트 디렉토리)
+          printf "ACR_LOGIN_SERVER=%s\nGRAFANA_ADMIN_PASSWORD=%s\nGRAFANA_ROOT_URL=%s\nSLACK_WEBHOOK_URL=%s\n" \
+            "$ACR_LOGIN_SERVER" \
+            "$GRAFANA_ADMIN_PASSWORD" \
+            "$GRAFANA_ROOT_URL" \
+            "$SLACK_WEBHOOK_URL" > .env
 
-            # 5. 네트워크 및 공통 설정 준비
-            docker network inspect funda-network >/dev/null 2>&1 || docker network create funda-network
+          # 3. BE 전용 환경 변수 주입
+          mkdir -p apps/backend
+          printf '%s' "$ENV_BE_PROD" > apps/backend/.env.production
 
-            # 6. 실행 (애플리케이션)
-            APP_COMPOSE=docker/production/docker-compose.deploy.yml
-            # MONITOR_COMPOSE=docker/monitoring/docker-compose.monitoring.production.yml
+          # 4. Azure Container Registry 로그인
+          echo "$ACR_PASSWORD" | docker login "$ACR_LOGIN_SERVER" -u "$ACR_USERNAME" --password-stdin
 
-            docker compose --env-file .env -f $APP_COMPOSE pull
-            # docker compose --env-file .env -f $MONITOR_COMPOSE pull
+          # 5. 네트워크 및 공통 설정 준비
+          docker network inspect funda-network >/dev/null 2>&1 || docker network create funda-network
 
-            docker compose --env-file .env -f $APP_COMPOSE up -d --remove-orphans
-            # docker compose --env-file .env -f $MONITOR_COMPOSE up -d
+          # 6. 실행 (애플리케이션)
+          APP_COMPOSE=docker/production/docker-compose.deploy.yml
+          # MONITOR_COMPOSE=docker/monitoring/docker-compose.monitoring.production.yml
 
-            # 7. DB 마이그레이션
-            docker compose --env-file .env -f $APP_COMPOSE exec -T backend \
-              node ./node_modules/typeorm/cli.js -d dist/config/typeorm.data-source.js migration:run
+          docker compose --env-file .env -f "$APP_COMPOSE" pull
+          # docker compose --env-file .env -f "$MONITOR_COMPOSE" pull
 
-            # 7-1. 로드맵/필드 캐시 삭제
-            docker compose --env-file .env -f $APP_COMPOSE exec -T redis sh -lc \
-              "redis-cli --scan --pattern 'fields:*' | xargs -r redis-cli DEL"
+          docker compose --env-file .env -f "$APP_COMPOSE" up -d --remove-orphans
+          # docker compose --env-file .env -f "$MONITOR_COMPOSE" up -d
 
-            # 8. 정리
-            docker image prune -f
+          # 7. DB 마이그레이션
+          docker compose --env-file .env -f "$APP_COMPOSE" exec -T backend \
+            node ./node_modules/typeorm/cli.js -d dist/config/typeorm.data-source.js migration:run
+
+          # 7-1. 로드맵/필드 캐시 삭제
+          docker compose --env-file .env -f "$APP_COMPOSE" exec -T redis sh -lc \
+            "redis-cli --scan --pattern 'fields:*' | xargs -r redis-cli DEL"
+
+          # 8. 정리
+          docker image prune -f
