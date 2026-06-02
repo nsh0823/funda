@@ -22,9 +22,8 @@ jobs:
     runs-on:
       # 실제 self-hosted runner label에 맞게 조정하세요.
       - self-hosted
-      - linux
-      - x64
-      - funda-prod
+      - Linux
+      - X64
     steps:
       - name: deploy on self-hosted runner
         timeout-minutes: 30
