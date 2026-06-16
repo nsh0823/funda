@@ -10,6 +10,10 @@ interface MeResponse {
   user: AuthUser;
 }
 
+interface LoginResponse {
+  user: AuthUser;
+}
+
 export const authService = {
   async loginWithGoogle(): Promise<void> {
     const targetUrl = `${BASE_URL}/auth/google`;
@@ -19,6 +23,11 @@ export const authService = {
   async loginWithGitHub(): Promise<void> {
     const targetUrl = `${BASE_URL}/auth/github`;
     window.location.href = targetUrl;
+  },
+
+  async loginAsGuest(): Promise<AuthUser> {
+    const response = await apiFetch.post<LoginResponse>('/auth/guest');
+    return response.user;
   },
 
   async logout(): Promise<void> {

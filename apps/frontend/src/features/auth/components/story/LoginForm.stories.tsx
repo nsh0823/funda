@@ -29,6 +29,7 @@ const meta: Meta<typeof LoginForm> = {
   args: {
     onGoogleLogin: () => {},
     onGitHubLogin: () => {},
+    onGuestLogin: () => {},
   },
 };
 
@@ -42,16 +43,16 @@ export const Default: Story = {
     // 제목 확인
     await expect(canvas.getByText('Funda')).toBeInTheDocument();
     await expect(canvas.getByText('재미있게 배우는 개발 지식')).toBeInTheDocument();
-
-    // 소셜 증명 텍스트 확인
-    await expect(canvas.getByText(/10,000\+명의 개발자가/)).toBeInTheDocument();
+    await expect(canvas.getByText('또는')).toBeInTheDocument();
 
     // 버튼 확인
     const googleButton = canvas.getByRole('button', { name: /Google로 계속하기/i });
     const githubButton = canvas.getByRole('button', { name: /GitHub로 계속하기/i });
+    const guestButton = canvas.getByRole('button', { name: /게스트로 로그인/i });
 
     await expect(googleButton).toBeInTheDocument();
     await expect(githubButton).toBeInTheDocument();
+    await expect(guestButton).toBeInTheDocument();
   },
 };
 
@@ -70,5 +71,8 @@ export const Interactive: Story = {
     await expect(githubButton).toBeInTheDocument();
     await expect(githubButton).not.toBeDisabled();
     await userEvent.click(githubButton);
+
+    const guestButton = canvas.getByRole('button', { name: /게스트로 로그인/i });
+    await expect(guestButton).toBeInTheDocument();
   },
 };

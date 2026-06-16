@@ -10,15 +10,23 @@ import type { Theme } from '@/styles/theme';
 interface LoginFormProps {
   onGoogleLogin: () => void;
   onGitHubLogin: () => void;
+  onGuestLogin: () => void;
   isLoggingIn: boolean;
-  loggingProvider?: 'google' | 'github' | null;
+  loggingProvider?: 'google' | 'github' | 'guest' | null;
 }
 
 export const LoginForm = memo(
-  ({ onGoogleLogin, onGitHubLogin, isLoggingIn, loggingProvider = null }: LoginFormProps) => {
+  ({
+    onGoogleLogin,
+    onGitHubLogin,
+    onGuestLogin,
+    isLoggingIn,
+    loggingProvider = null,
+  }: LoginFormProps) => {
     const theme = useTheme();
     const isGoogleLoggingIn = loggingProvider === 'google';
     const isGitHubLoggingIn = loggingProvider === 'github';
+    const isGuestLoggingIn = loggingProvider === 'guest';
 
     return (
       <main css={containerStyle()}>
@@ -36,29 +44,48 @@ export const LoginForm = memo(
           <p css={taglineStyle(theme)}>재미있게 배우는 개발 지식</p>
 
           <div css={buttonGroupStyle} role="group" aria-label="로그인">
+            <div css={socialButtonGroupStyle}>
+              <Button
+                variant="secondary"
+                onClick={onGoogleLogin}
+                fullWidth
+                css={loginButtonStyle}
+                disabled={isLoggingIn}
+                aria-label={isGoogleLoggingIn ? 'Google 로그인 중' : 'Google로 로그인'}
+                aria-busy={isGoogleLoggingIn}
+              >
+                <SVGIcon icon="Google" size="md" aria-hidden="true" />
+                <span>Google로 {isGoogleLoggingIn ? '로그인 중..' : '계속하기'}</span>
+              </Button>
+              <Button
+                variant="primary"
+                onClick={onGitHubLogin}
+                fullWidth
+                css={loginButtonStyle}
+                disabled={isLoggingIn}
+                aria-label={isGitHubLoggingIn ? 'GitHub 로그인 중' : 'GitHub로 로그인'}
+                aria-busy={isGitHubLoggingIn}
+              >
+                <SVGIcon icon="Github" size="md" aria-hidden="true" />
+                <span>GitHub로 {isGitHubLoggingIn ? '로그인 중..' : '계속하기'}</span>
+              </Button>
+            </div>
+
+            <div css={dividerStyle(theme)} aria-hidden="true">
+              <span>또는</span>
+            </div>
+
             <Button
               variant="secondary"
-              onClick={onGoogleLogin}
+              onClick={onGuestLogin}
               fullWidth
               css={loginButtonStyle}
               disabled={isLoggingIn}
-              aria-label={isGoogleLoggingIn ? 'Google 로그인 중' : 'Google로 로그인'}
-              aria-busy={isGoogleLoggingIn}
+              aria-label={isGuestLoggingIn ? '게스트 로그인 중' : '게스트로 로그인'}
+              aria-busy={isGuestLoggingIn}
             >
-              <SVGIcon icon="Google" size="md" aria-hidden="true" />
-              <span>Google로 {isGoogleLoggingIn ? '로그인 중..' : '계속하기'}</span>
-            </Button>
-            <Button
-              variant="primary"
-              onClick={onGitHubLogin}
-              fullWidth
-              css={loginButtonStyle}
-              disabled={isLoggingIn}
-              aria-label={isGitHubLoggingIn ? 'GitHub 로그인 중' : 'GitHub로 로그인'}
-              aria-busy={isGitHubLoggingIn}
-            >
-              <SVGIcon icon="Github" size="md" aria-hidden="true" />
-              <span>GitHub로 {isGitHubLoggingIn ? '로그인 중..' : '계속하기'}</span>
+              <SVGIcon icon="Profile" size="md" aria-hidden="true" />
+              <span>게스트로 {isGuestLoggingIn ? '로그인 중..' : '둘러보기'}</span>
             </Button>
           </div>
 
@@ -120,9 +147,35 @@ const taglineStyle = (theme: Theme) => css`
 const buttonGroupStyle = css`
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
   width: 100%;
   margin-top: 8px;
+`;
+
+const socialButtonGroupStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+`;
+
+const dividerStyle = (theme: Theme) => css`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: ${theme.colors.text.weak};
+  font-size: ${theme.typography['14Medium'].fontSize};
+  line-height: ${theme.typography['14Medium'].lineHeight};
+  font-weight: ${theme.typography['14Medium'].fontWeight};
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: ${theme.colors.border.default};
+  }
 `;
 
 const loginButtonStyle = css`

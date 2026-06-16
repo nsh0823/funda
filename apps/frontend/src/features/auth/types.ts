@@ -10,5 +10,5 @@ export interface AuthUser {
   experience: number;
   diamondCount: number;
   currentStreak: number;
-  provider: 'github' | 'google';
+  provider: 'github' | 'google' | 'guest';
 }
