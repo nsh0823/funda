@@ -18,6 +18,7 @@ import { UserRefreshToken } from './user-refresh-token.entity';
 export enum AuthProvider {
   GITHUB = 'github',
   GOOGLE = 'google',
+  GUEST = 'guest',
 }
 
 export enum UserRole {

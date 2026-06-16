@@ -141,6 +141,59 @@ export class AuthController {
     return { heartCount };
   }
 
+  @Post('guest')
+  @ApiOperation({
+    summary: '게스트 로그인',
+    description: '채용 담당자 등이 로그인 전용 기능을 확인할 수 있도록 게스트 유저로 로그인한다.',
+  })
+  @ApiOkResponse({
+    description: '게스트 로그인 성공',
+    schema: {
+      example: {
+        success: true,
+        code: 200,
+        message: '게스트로 로그인했습니다.',
+        result: {
+          user: {
+            id: 1,
+            displayName: 'Guest',
+            email: null,
+            profileImageUrl: null,
+            role: 'user',
+            isEmailSubscribed: false,
+            heartCount: 5,
+            maxHeartCount: 5,
+            experience: 0,
+            diamondCount: 0,
+            currentStreak: 0,
+            provider: 'guest',
+          },
+        },
+      },
+    },
+  })
+  async guestLogin(
+    @Req() req: Request & { cookies?: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ result: { user: AuthUserProfile }; message: string }> {
+    const clientId = this.ensureClientIdCookie(req, res);
+    const meta = this.toRequestMeta(req);
+    const { accessToken, refreshToken, user } = await this.authService.handleGuestLogin(
+      clientId,
+      meta,
+    );
+
+    this.authService.attachRefreshTokenCookie(res, refreshToken);
+    this.authService.attachAccessTokenCookie(res, accessToken);
+
+    return {
+      result: {
+        user,
+      },
+      message: '게스트로 로그인했습니다.',
+    };
+  }
+
   @Get('github')
   @ApiOperation({
     summary: 'GitHub OAuth 로그인 시작',
@@ -382,6 +435,28 @@ export class AuthController {
     const ipAddress = typeof request.ip === 'string' ? request.ip : undefined;
 
     return { userAgent, ipAddress };
+  }
+
+  private ensureClientIdCookie(
+    req: Request & { cookies?: Record<string, string> },
+    res: Response,
+  ): string {
+    const existingClientId = req.cookies?.client_id;
+    const clientId = existingClientId || uuidv4();
+
+    if (!existingClientId) {
+      const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+
+      res.cookie('client_id', clientId, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+    }
+
+    return clientId;
   }
 
   private buildRedirectUrl(): string {

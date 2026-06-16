@@ -86,6 +86,11 @@ export class AuthService {
     return this.completeOAuthLogin(user, meta, clientId);
   }
 
+  async handleGuestLogin(clientId: string, meta: RequestMeta): Promise<TokenPairResult> {
+    const user = await this.upsertGuestUser(clientId);
+    return this.completeOAuthLogin(user, meta, clientId);
+  }
+
   private async completeOAuthLogin(
     user: User,
     meta: RequestMeta,
@@ -305,6 +310,35 @@ export class AuthService {
       email: this.pickEmail(profile),
       role: UserRole.USER,
       lastLoginAt: new Date(),
+    });
+
+    return this.users.save(newUser);
+  }
+
+  private async upsertGuestUser(clientId: string): Promise<User> {
+    const providerUserId = `guest:${clientId}`;
+    const existingUser = await this.users.findOne({
+      where: {
+        provider: AuthProvider.GUEST,
+        providerUserId,
+      },
+    });
+
+    if (existingUser) {
+      existingUser.displayName = 'Guest';
+      existingUser.lastLoginAt = new Date();
+
+      return this.users.save(existingUser);
+    }
+
+    const newUser = this.users.create({
+      provider: AuthProvider.GUEST,
+      providerUserId,
+      displayName: 'Guest',
+      email: null,
+      role: UserRole.USER,
+      lastLoginAt: new Date(),
+      isEmailSubscribed: false,
     });
 
     return this.users.save(newUser);
