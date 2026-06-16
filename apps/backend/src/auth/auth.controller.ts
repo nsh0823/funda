@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
@@ -367,6 +376,47 @@ export class AuthController {
         success: true,
       },
       message: '로그아웃되었습니다.',
+    };
+  }
+
+  @Delete('me')
+  @ApiOperation({
+    summary: '회원 탈퇴',
+    description: '현재 로그인한 사용자의 계정과 관련 데이터를 삭제하고 인증 쿠키를 제거한다.',
+  })
+  @ApiBearerAuth()
+  @ApiOkResponse({
+    description: '회원 탈퇴 완료',
+    schema: {
+      example: {
+        success: true,
+        code: 200,
+        message: '탈퇴 처리되었습니다.',
+        result: {
+          success: true,
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: '액세스 토큰이 없거나 유효하지 않음' })
+  @UseGuards(JwtAccessGuard)
+  async deleteMe(
+    @Req() req: AccessRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ result: { success: true }; message: string }> {
+    if (!req.user) {
+      throw new UnauthorizedException('액세스 토큰을 확인할 수 없습니다.');
+    }
+
+    await this.authService.deleteUserById(req.user.sub);
+    this.authService.clearRefreshTokenCookie(res);
+    this.authService.clearAccessTokenCookie(res);
+
+    return {
+      result: {
+        success: true,
+      },
+      message: '탈퇴 처리되었습니다.',
     };
   }
 

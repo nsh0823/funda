@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Response } from 'express';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { CacheKeys } from '../common/cache/cache-keys';
 import { RedisService } from '../common/redis/redis.service';
@@ -55,6 +55,7 @@ export class AuthService {
     private readonly stepStatusRepository: Repository<UserStepStatus>,
     @InjectRepository(Step)
     private readonly stepRepository: Repository<Step>,
+    private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
@@ -205,6 +206,39 @@ export class AuthService {
     record.revokedAt = new Date();
     record.lastUsedAt = new Date();
     await this.refreshTokens.save(record);
+  }
+
+  async deleteUserById(userId: number): Promise<void> {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('유저 정보를 찾을 수 없습니다.');
+    }
+    if (user.provider === AuthProvider.GUEST) {
+      throw new BadRequestException('게스트 계정은 탈퇴 대상이 아닙니다.');
+    }
+
+    await this.dataSource.transaction(async manager => {
+      await manager.query('DELETE FROM `ai_question_answers` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `solve_logs` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `user_quiz_statuses` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `user_step_statuses` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `user_step_attempts` WHERE `user_id` = ?', [userId]);
+      await manager.query('UPDATE `reports` SET `user_id` = NULL WHERE `user_id` = ?', [userId]);
+      await manager.query(
+        'DELETE FROM `user_follows` WHERE `follower_id` = ? OR `following_id` = ?',
+        [userId, userId],
+      );
+      await manager.query('DELETE FROM `user_profile_characters` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `ranking_group_members` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `ranking_weekly_xp` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `ranking_reward_histories` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `ranking_weekly_snapshots` WHERE `user_id` = ?', [userId]);
+      await manager.query('DELETE FROM `ranking_tier_change_histories` WHERE `user_id` = ?', [
+        userId,
+      ]);
+      await manager.query('DELETE FROM `user_refresh_tokens` WHERE `user_id` = ?', [userId]);
+      await manager.delete(User, { id: userId });
+    });
   }
 
   /**
