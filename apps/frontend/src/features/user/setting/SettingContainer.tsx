@@ -3,7 +3,7 @@ import { memo } from 'react';
 
 import { Button } from '@/comp/Button';
 import SVGIcon from '@/comp/SVGIcon';
-import { useIsAuthReady, useIsLoggedIn } from '@/store/authStore';
+import { useAuthUser, useIsAuthReady, useIsLoggedIn } from '@/store/authStore';
 import type { Theme } from '@/styles/theme';
 
 import { AppearanceSection } from './AppearanceSection';
@@ -14,6 +14,7 @@ interface SettingProps {
   isDarkMode: boolean;
   onDarkModeToggle: (checked: boolean) => void;
   onLogout: () => void;
+  onDeleteAccount: () => void;
   soundVolume: number;
   onSoundVolumeChange: (volume: number) => void;
   isEmailSubscribed: boolean;
@@ -27,6 +28,7 @@ export const SettingContainer = memo(
     isDarkMode,
     onDarkModeToggle,
     onLogout,
+    onDeleteAccount,
     soundVolume,
     onSoundVolumeChange,
     isEmailSubscribed,
@@ -37,6 +39,8 @@ export const SettingContainer = memo(
     const theme = useTheme();
     const isLoggedIn = useIsLoggedIn();
     const isAuthReady = useIsAuthReady();
+    const user = useAuthUser();
+    const canDeleteAccount = user?.provider === 'github' || user?.provider === 'google';
 
     return (
       <div css={containerStyle}>
@@ -55,10 +59,22 @@ export const SettingContainer = memo(
         )}
 
         {isAuthReady && isLoggedIn && (
-          <Button variant="primary" fullWidth onClick={onLogout} css={logoutButtonStyle}>
-            <SVGIcon icon="Logout" size="md" />
-            <span>로그아웃</span>
-          </Button>
+          <div css={accountActionGroupStyle}>
+            <Button variant="primary" fullWidth onClick={onLogout} css={logoutButtonStyle}>
+              <SVGIcon icon="Logout" size="md" />
+              <span>로그아웃</span>
+            </Button>
+            {canDeleteAccount && (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={onDeleteAccount}
+                css={deleteAccountButtonStyle(theme)}
+              >
+                탈퇴하기
+              </Button>
+            )}
+          </div>
         )}
       </div>
     );
@@ -96,4 +112,25 @@ const logoutButtonStyle = css`
   align-items: center;
   justify-content: center;
   gap: 8px;
+`;
+
+const accountActionGroupStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const deleteAccountButtonStyle = (theme: Theme) => css`
+  color: ${theme.colors.error.main};
+  border-color: ${theme.colors.error.surface};
+  box-shadow: 0 0.3rem 0 ${theme.colors.error.surface};
+
+  &:not(:disabled):hover {
+    filter: brightness(0.98);
+    box-shadow: 0 0.425rem 0 ${theme.colors.error.surface};
+  }
+
+  &:not(:disabled):active {
+    box-shadow: 0 0.125rem 0 ${theme.colors.error.surface};
+  }
 `;

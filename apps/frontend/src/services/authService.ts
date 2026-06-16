@@ -34,6 +34,10 @@ export const authService = {
     return apiFetch.post('/auth/logout');
   },
 
+  async deleteAccount(): Promise<void> {
+    return apiFetch.delete('/auth/me');
+  },
+
   /**
    * 현재 사용자 정보 조회
    */

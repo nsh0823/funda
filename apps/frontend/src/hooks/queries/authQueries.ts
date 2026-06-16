@@ -31,3 +31,16 @@ export const useLogoutMutation = () => {
     },
   });
 };
+
+export const useDeleteAccountMutation = () => {
+  const queryClient = useQueryClient();
+  const { clearAuth } = useAuthActions();
+
+  return useMutation({
+    mutationFn: () => authService.deleteAccount(),
+    onSuccess: () => {
+      clearAuth();
+      queryClient.clear();
+    },
+  });
+};

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { Loading } from '@/comp/Loading';
 import { SettingContainer } from '@/feat/user/setting/SettingContainer';
-import { useLogoutMutation } from '@/hooks/queries/authQueries';
+import { useDeleteAccountMutation, useLogoutMutation } from '@/hooks/queries/authQueries';
 import { useUpdateEmailSubscriptionMutation } from '@/hooks/queries/userQueries';
 import { useStorage } from '@/hooks/useStorage';
 import { useAuthUser } from '@/store/authStore';
@@ -20,6 +20,7 @@ export const Setting = () => {
   const user = useAuthUser();
 
   const logoutMutation = useLogoutMutation();
+  const deleteAccountMutation = useDeleteAccountMutation();
   const updateEmailSubscriptionMutation = useUpdateEmailSubscriptionMutation();
 
   /**
@@ -62,6 +63,27 @@ export const Setting = () => {
   }, [navigate, showToast, confirm, logoutMutation]);
 
   /**
+   * 회원 탈퇴 핸들러
+   */
+  const handleDeleteAccount = useCallback(async () => {
+    const isConfirmed = await confirm({
+      title: '탈퇴하기',
+      content: '계정과 학습 기록이 삭제됩니다. 정말 탈퇴하시겠습니까?',
+      confirmText: '탈퇴하기',
+      cancelText: '취소',
+    });
+    if (!isConfirmed) return;
+
+    try {
+      navigate('/learn', { replace: true });
+      await deleteAccountMutation.mutateAsync();
+      showToast('탈퇴 처리되었습니다.');
+    } catch {
+      showToast('탈퇴 처리 중 오류가 발생했습니다.');
+    }
+  }, [confirm, deleteAccountMutation, navigate, showToast]);
+
+  /**
    * 이메일 알림 설정 변경 핸들러
    *
    * @param checked 이메일 알림 수신 여부
@@ -91,13 +113,14 @@ export const Setting = () => {
 
   return (
     <>
-      {logoutMutation.isPending && <Loading />}
+      {(logoutMutation.isPending || deleteAccountMutation.isPending) && <Loading />}
       <SettingContainer
         isDarkMode={isDarkMode}
         onDarkModeToggle={handleDarkModeToggle}
         soundVolume={soundVolume}
         onSoundVolumeChange={handleSoundVolumeChange}
         onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccount}
         isEmailSubscribed={user?.isEmailSubscribed ?? false}
         email={user?.email ?? null}
         isEmailToggleDisabled={isEmailToggleDisabled}
